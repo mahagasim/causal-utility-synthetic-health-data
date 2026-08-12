@@ -1,7 +1,13 @@
-name: CTGAN optional smoke
+name: CTGAN integration smoke
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "src/causal_utility/synthesize.py"
+      - "tests/test_ctgan_optional.py"
+      - "pyproject.toml"
+      - ".github/workflows/ctgan-smoke.yml"
 
 jobs:
   ctgan:
@@ -13,5 +19,5 @@ jobs:
           python-version: "3.12"
       - name: Install with CTGAN
         run: pip install -e ".[dev,ctgan]"
-      - name: Verify optional dependency
-        run: pytest tests/test_ctgan_optional.py
+      - name: Run CTGAN integration test
+        run: pytest tests/test_ctgan_optional.py -q
