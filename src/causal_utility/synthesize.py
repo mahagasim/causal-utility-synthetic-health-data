@@ -63,7 +63,9 @@ class EmpiricalGaussianCopula:
                 lower = np.r_[0.0, upper[:-1]]
                 midpoint = np.clip(lower + probs / 2, 1e-6, 1 - 1e-6)
                 z_mid = norm.ppf(midpoint)
-                mapping = {cat: z for cat, z in zip(categories, z_mid)}
+                mapping = {
+                    cat: z for cat, z in zip(categories, z_mid, strict=True)
+                }
                 latent[:, j] = np.array([mapping[v] for v in values], dtype=float)
                 self.category_info_[col] = (categories, upper)
         self.correlation_ = _nearest_correlation(np.corrcoef(latent, rowvar=False))
@@ -101,12 +103,19 @@ def synthesize_gaussian_copula(data: pd.DataFrame, seed: int) -> pd.DataFrame:
     return model.fit(data).sample(len(data), seed=seed + 1)
 
 
-def synthesize_ctgan(data: pd.DataFrame, seed: int, epochs: int = 150, verbose: bool = False) -> pd.DataFrame:
+def synthesize_ctgan(
+    data: pd.DataFrame,
+    seed: int,
+    epochs: int = 150,
+    verbose: bool = False,
+) -> pd.DataFrame:
     try:
         import torch
         from ctgan import CTGAN
     except ImportError as exc:
-        raise RuntimeError("CTGAN is optional and not installed. Install with: pip install -e '.[ctgan]'") from exc
+        raise RuntimeError(
+            "CTGAN is optional and not installed. Install with: pip install -e '.[ctgan]'"
+        ) from exc
     np.random.seed(seed)
     torch.manual_seed(seed)
     work = data.copy()
@@ -118,21 +127,36 @@ def synthesize_ctgan(data: pd.DataFrame, seed: int, epochs: int = 150, verbose: 
     model.fit(work, discrete_columns=CATEGORICAL_COLUMNS)
     sampled = model.sample(len(work)).loc[:, work.columns].copy()
     for col in CATEGORICAL_COLUMNS:
-        sampled[col] = pd.to_numeric(sampled[col], errors="coerce").round().astype("Int64")
-    sampled[CONTINUOUS_COLUMNS] = sampled[CONTINUOUS_COLUMNS].apply(pd.to_numeric, errors="coerce")
+        sampled[col] = (
+            pd.to_numeric(sampled[col], errors="coerce").round().astype("Int64")
+        )
+    sampled[CONTINUOUS_COLUMNS] = sampled[CONTINUOUS_COLUMNS].apply(
+        pd.to_numeric,
+        errors="coerce",
+    )
     sampled = sampled.dropna().reset_index(drop=True)
     if len(sampled) < len(work):
         extra = model.sample(len(work) - len(sampled))
         for col in CATEGORICAL_COLUMNS:
-            extra[col] = pd.to_numeric(extra[col], errors="coerce").round().astype("Int64")
-        extra[CONTINUOUS_COLUMNS] = extra[CONTINUOUS_COLUMNS].apply(pd.to_numeric, errors="coerce")
+            extra[col] = (
+                pd.to_numeric(extra[col], errors="coerce").round().astype("Int64")
+            )
+        extra[CONTINUOUS_COLUMNS] = extra[CONTINUOUS_COLUMNS].apply(
+            pd.to_numeric,
+            errors="coerce",
+        )
         sampled = pd.concat([sampled, extra.dropna()], ignore_index=True).head(len(work))
     for col in CATEGORICAL_COLUMNS:
         sampled[col] = sampled[col].astype(int)
     return sampled.head(len(work)).reset_index(drop=True)
 
 
-def synthesize(data: pd.DataFrame, method: str, seed: int, ctgan_epochs: int = 150) -> pd.DataFrame:
+def synthesize(
+    data: pd.DataFrame,
+    method: str,
+    seed: int,
+    ctgan_epochs: int = 150,
+) -> pd.DataFrame:
     if method == "gaussian_copula":
         return synthesize_gaussian_copula(data, seed=seed)
     if method == "ctgan":
