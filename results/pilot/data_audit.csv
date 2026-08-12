@@ -1,0 +1,2 @@
+raw_variable,analytic_variable,raw_missing_fraction,retained_nonmissing_fraction,retained_rows,source_path,cache_used
+__sample__,complete_case_pool,,,324636,data/raw/Demo+Health data.xlsx,True

@@ -1,0 +1,13 @@
+scenario,generator,replicate,seconds
+standard,reference,0,1.7844980229999692
+standard,gaussian_copula,0,2.4059981570001128
+standard,reference,1,1.8388624720000735
+standard,gaussian_copula,1,2.1250148000001445
+standard,reference,2,1.828151546000072
+standard,gaussian_copula,2,2.683889044999887
+weak_overlap,reference,0,1.877939663999996
+weak_overlap,gaussian_copula,0,2.6057395400000587
+weak_overlap,reference,1,1.4761017769999398
+weak_overlap,gaussian_copula,1,2.2284599940001044
+weak_overlap,reference,2,1.8739622140001302
+weak_overlap,gaussian_copula,2,2.3923224910001863

@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "causal-utility-synthetic-health-data"
+version = "0.1.0"
+description = "Semi-synthetic evaluation of whether statistical fidelity predicts causal utility of synthetic health data."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = {file = "LICENSE"}
+authors = [{name = "Maha Gasim"}]
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.1",
+  "scipy>=1.11",
+  "scikit-learn>=1.4",
+  "matplotlib>=3.8",
+  "openpyxl>=3.1",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+ctgan = ["ctgan==0.12.1"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+causal-utility = "causal_utility.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B"]

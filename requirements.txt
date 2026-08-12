@@ -1,0 +1,11 @@
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+scikit-learn>=1.4
+matplotlib>=3.8
+openpyxl>=3.1
+PyYAML>=6.0
+pytest>=8
+
+# CTGAN is optional. Install the full optional stack with:
+# pip install -e ".[dev,ctgan]"

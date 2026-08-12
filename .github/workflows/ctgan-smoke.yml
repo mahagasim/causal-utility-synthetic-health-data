@@ -1,0 +1,17 @@
+name: CTGAN optional smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ctgan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install with CTGAN
+        run: pip install -e ".[dev,ctgan]"
+      - name: Verify optional dependency
+        run: pytest tests/test_ctgan_optional.py

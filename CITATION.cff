@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+title: "Causal Utility of Synthetic Health Data"
+message: "If you use this research code, please cite the repository."
+type: software
+authors:
+  - family-names: Gasim
+    given-names: Maha
+version: 0.1.0
+date-released: 2026-08-11
+license: MIT

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Respondent-level data are never committed
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Potentially sensitive/high-volume generated artifacts
+results/**/synthetic_*.csv
+results/**/reference_rows*.csv
+models/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
