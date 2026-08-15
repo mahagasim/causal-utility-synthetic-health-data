@@ -60,10 +60,10 @@ Only these two scenarios are primary. The project intentionally avoids a large s
 
 ## Synthetic-data generators
 
-1. **Empirical Gaussian copula** — transparent baseline with empirical continuous marginals and latent-normal categorical intervals.
-2. **CTGAN** — optional deep generative benchmark for mixed tabular data.
+1. **Empirical Gaussian copula** — transparent baseline with empirical continuous marginals and latent-normal categorical intervals. This is the generator used in the primary application study.
+2. **CTGAN** — optional deep generative benchmark for mixed tabular data. Integration is tested separately, but CTGAN results are not part of the primary study unless the corresponding experiment is actually run.
 
-The full protocol compares both. CTGAN is an optional dependency because it is computationally heavier; the core repository and CI remain usable without it.
+The project does not treat the Gaussian copula as state of the art. Its value here is transparency: its behavior and failure modes can be inspected directly, which makes synthesis-induced causal distortion easier to reason about.
 
 ## Conventional utility
 
@@ -82,8 +82,10 @@ A fixed hierarchy is applied identically to reference and synthetic data:
 
 1. crude difference in means — deliberately confounded baseline;
 2. cross-fitted g-computation with histogram gradient boosting;
-3. Hájek-normalized IPW using a compact logistic propensity model;
+3. Hájek-normalized IPW using a compact main-effects logistic propensity model;
 4. cross-fitted AIPW with flexible nuisance functions — primary estimator.
+
+The treatment DGP contains nonlinear terms and an interaction that the compact IPW propensity model does not include. IPW is therefore intentionally a **misspecification-sensitive benchmark**, not the correctly specified primary estimator. This distinction is important when separating estimator error on the reference data from additional distortion induced by synthesis.
 
 DML, TMLE, causal forests, and CATE estimation are deferred because they do not answer the primary question more directly.
 
@@ -93,7 +95,7 @@ At replicate level:
 
 - ATE error and absolute error relative to known truth;
 - relative absolute error;
-- reference-estimate distortion;
+- synthetic-minus-reference estimate distortion for the same scenario, replicate, and estimator;
 - confidence-interval coverage where an inferential estimator supplies a CI;
 - sign preservation.
 
@@ -101,7 +103,11 @@ Across Monte Carlo replicates:
 
 - bias;
 - mean absolute error;
-- RMSE;
+- RMSE relative to known truth;
+- mean synthetic-minus-reference estimate distortion;
+- mean absolute synthetic-reference distortion;
+- RMSE of synthetic-reference distortion;
+- correlation between synthetic and corresponding reference estimates;
 - empirical SD;
 - mean estimated SE;
 - SE ratio = mean estimated SE / empirical SD;
@@ -109,15 +115,24 @@ Across Monte Carlo replicates:
 - mean CI width;
 - sign preservation.
 
+The within-dataset SEs are analyst-facing model-based uncertainty estimates. For synthetic datasets they do **not** incorporate uncertainty from estimating the synthesis model or from the original confidential/reference sample. Their adequacy is assessed empirically through Monte Carlo SD, SE/SD ratios, and coverage rather than assumed.
+
 Mechanism diagnostics also evaluate whether models learned from synthetic data reproduce the known treatment propensity and treatment-effect contrast on the original X grid.
 
 ## Monte Carlo sizes
 
 - `smoke.yaml`: execution/testing only.
 - `pilot.yaml`: small computational validation; **not a basis for scientific conclusions**.
-- `full.yaml`: n=4,000, 100 replications, two scenarios, Gaussian copula + CTGAN. This is the intended main study.
+- `main_gaussian.yaml`: n=4,000, 100 replications, two scenarios, Gaussian copula only. This is the primary application study.
+- `full.yaml`: broader Gaussian copula + CTGAN configuration retained for optional later benchmarking; it is not claimed as completed unless those runs exist.
 
-The full replication count is chosen to make coverage and RMSE substantially more interpretable than the small pilot, subject to a final compute-precision check.
+With 100 replications, a nominal 95% coverage estimate has Monte Carlo standard error of about 2.2 percentage points. Coverage should therefore be interpreted with that simulation uncertainty in mind.
+
+## BRFSS preprocessing scope
+
+The empirical covariate pool is complete-case after restricting to the eight DGP covariates. BRFSS special missing codes are screened before recoding. BMI outside 12–60 kg/m² is screened as a **study-specific plausibility choice**, not as an official BRFSS validity rule; this choice should be reported and can be revisited in sensitivity analysis.
+
+Survey weights are not used because the target is the empirical covariate distribution used by the simulation, not a population-representative U.S. adult estimand.
 
 ## Privacy scope
 
