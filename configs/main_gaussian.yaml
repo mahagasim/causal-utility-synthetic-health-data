@@ -1,0 +1,15 @@
+data:
+  path: data/raw/Demo+Health data.xlsx
+  cache_path: data/processed/brfss_covariates.csv
+
+experiment:
+  n: 4000
+  repetitions: 100
+  seed: 20260811
+  n_splits: 5
+  scenarios:
+    - standard
+    - weak_overlap
+  generators:
+    - gaussian_copula
+  ctgan_epochs: 75
