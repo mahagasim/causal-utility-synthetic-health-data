@@ -1,0 +1,15 @@
+scenario,generator,metric,mean,std
+standard,gaussian_copula,estimated_share_outside_0.1_0.9,0.00048,0.0007086051171994259
+standard,gaussian_copula,ipw_effective_sample_size,3518.599675225784,58.16518786161169
+standard,reference,estimated_share_outside_0.1_0.9,0.012595,0.004681763998901926
+standard,reference,ipw_effective_sample_size,3120.37865917233,76.68269221993121
+standard,reference,true_propensity_p01,0.13260523891107784,0.0027165815806917855
+standard,reference,true_propensity_p99,0.9281653641447201,0.005960036523880353
+standard,reference,true_share_outside_0.1_0.9,0.018359999999999998,0.0016717045072607655
+weak_overlap,gaussian_copula,estimated_share_outside_0.1_0.9,0.06045249999999999,0.013058420355146986
+weak_overlap,gaussian_copula,ipw_effective_sample_size,2753.618011359678,127.09869503314758
+weak_overlap,reference,estimated_share_outside_0.1_0.9,0.25460249999999995,0.016712025209894867
+weak_overlap,reference,ipw_effective_sample_size,1610.2268622437543,129.80822280749365
+weak_overlap,reference,true_propensity_p01,0.028394960158085066,0.0013609252680159465
+weak_overlap,reference,true_propensity_p99,0.9949913120237782,0.0008430692731889158
+weak_overlap,reference,true_share_outside_0.1_0.9,0.26028249999999997,0.0071595855609134585

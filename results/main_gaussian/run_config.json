@@ -1,0 +1,19 @@
+{
+  "data": {
+    "cache_path": "data/processed/brfss_covariates.csv",
+    "path": "data/raw/Demo+Health data.xlsx"
+  },
+  "experiment": {
+    "generators": [
+      "gaussian_copula"
+    ],
+    "n": 4000,
+    "n_splits": 5,
+    "repetitions": 100,
+    "scenarios": [
+      "standard",
+      "weak_overlap"
+    ],
+    "seed": 20260811
+  }
+}

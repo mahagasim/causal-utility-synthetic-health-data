@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="480" viewBox="0 0 760 480">
+<style>text{font-family:Arial,sans-serif;fill:#222}.t{font-size:21px;font-weight:600}.a{font-size:14px}.l{font-size:12px}</style>
+<text x="380" y="30" text-anchor="middle" class="t">Conventional fidelity vs causal preservation</text>
+<line x1="80" y1="415" x2="730" y2="415" stroke="#333"/><line x1="80" y1="55" x2="80" y2="415" stroke="#333"/>
+<circle cx="80.0" cy="235.2" r="5" fill="#4C78A8" fill-opacity="0.8"/>
+<circle cx="178.4" cy="226.0" r="5" fill="#4C78A8" fill-opacity="0.8"/>
+<circle cx="222.8" cy="269.8" r="5" fill="#4C78A8" fill-opacity="0.8"/>
+<circle cx="254.1" cy="204.1" r="5" fill="#4C78A8" fill-opacity="0.8"/>
+<circle cx="284.9" cy="258.3" r="5" fill="#4C78A8" fill-opacity="0.8"/>
+<circle cx="328.1" cy="272.5" r="5" fill="#4C78A8" fill-opacity="0.8"/>
+<circle cx="376.7" cy="230.3" r="5" fill="#4C78A8" fill-opacity="0.8"/>
+<circle cx="434.4" cy="225.2" r="5" fill="#4C78A8" fill-opacity="0.8"/>
+<circle cx="515.5" cy="213.5" r="5" fill="#4C78A8" fill-opacity="0.8"/>
+<circle cx="710.4" cy="282.7" r="5" fill="#4C78A8" fill-opacity="0.8"/>
+<circle cx="115.0" cy="124.1" r="5" fill="#F58518" fill-opacity="0.8"/>
+<circle cx="208.0" cy="93.6" r="5" fill="#F58518" fill-opacity="0.8"/>
+<circle cx="244.7" cy="139.3" r="5" fill="#F58518" fill-opacity="0.8"/>
+<circle cx="283.3" cy="289.7" r="5" fill="#F58518" fill-opacity="0.8"/>
+<circle cx="337.1" cy="154.7" r="5" fill="#F58518" fill-opacity="0.8"/>
+<circle cx="368.4" cy="178.3" r="5" fill="#F58518" fill-opacity="0.8"/>
+<circle cx="424.6" cy="210.9" r="5" fill="#F58518" fill-opacity="0.8"/>
+<circle cx="477.2" cy="300.9" r="5" fill="#F58518" fill-opacity="0.8"/>
+<circle cx="590.1" cy="156.8" r="5" fill="#F58518" fill-opacity="0.8"/>
+<circle cx="730.0" cy="228.0" r="5" fill="#F58518" fill-opacity="0.8"/>
+<line x1="80.0" y1="415" x2="80.0" y2="420" stroke="#333"/><text x="80.0" y="435" text-anchor="middle" class="l">0.0082</text>
+<line x1="242.5" y1="415" x2="242.5" y2="420" stroke="#333"/><text x="242.5" y="435" text-anchor="middle" class="l">0.0099</text>
+<line x1="405.0" y1="415" x2="405.0" y2="420" stroke="#333"/><text x="405.0" y="435" text-anchor="middle" class="l">0.0117</text>
+<line x1="567.5" y1="415" x2="567.5" y2="420" stroke="#333"/><text x="567.5" y="435" text-anchor="middle" class="l">0.0135</text>
+<line x1="730.0" y1="415" x2="730.0" y2="420" stroke="#333"/><text x="730.0" y="435" text-anchor="middle" class="l">0.0153</text>
+<line x1="75" y1="415.0" x2="80" y2="415.0" stroke="#333"/><text x="70" y="419.0" text-anchor="end" class="l">0.00</text>
+<line x1="75" y1="325.0" x2="80" y2="325.0" stroke="#333"/><text x="70" y="329.0" text-anchor="end" class="l">0.10</text>
+<line x1="75" y1="235.0" x2="80" y2="235.0" stroke="#333"/><text x="70" y="239.0" text-anchor="end" class="l">0.20</text>
+<line x1="75" y1="145.0" x2="80" y2="145.0" stroke="#333"/><text x="70" y="149.0" text-anchor="end" class="l">0.30</text>
+<line x1="75" y1="55.0" x2="80" y2="55.0" stroke="#333"/><text x="70" y="59.0" text-anchor="end" class="l">0.40</text>
+<text x="405.0" y="465" text-anchor="middle" class="a">Descriptive fidelity distance (decile means)</text>
+<text x="18" y="235.0" text-anchor="middle" class="a" transform="rotate(-90 18 235.0)">Absolute AIPW synthetic-reference distortion</text>
+<rect x="565" y="63" width="12" height="12" fill="#4C78A8"/><text x="583" y="74" class="l">Standard overlap</text>
+<rect x="565" y="83" width="12" height="12" fill="#F58518"/><text x="583" y="94" class="l">Weak overlap</text>
+<text x="565" y="115" class="l">10 equal-size fidelity bins per scenario</text>
+</svg>
