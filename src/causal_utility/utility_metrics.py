@@ -237,13 +237,15 @@ def truth_mechanism_diagnostics(
 
 
 def add_causal_errors(estimates: pd.DataFrame) -> pd.DataFrame:
-    """Add estimand-specific errors to replicate-level estimates."""
+    """Add truth-relative and reference-relative errors to replicate estimates."""
     out = estimates.copy()
     out["error"] = out["estimate"] - out["true_ate"]
     out["absolute_error"] = out["error"].abs()
     out["relative_absolute_error"] = (
         out["absolute_error"] / out["true_ate"].abs().replace(0, np.nan)
     )
+    if "reference_estimate" in out.columns and "reference_estimate_distortion" not in out.columns:
+        out["reference_estimate_distortion"] = out["estimate"] - out["reference_estimate"]
     out["covered"] = np.where(
         out["ci_low"].notna(),
         (out["ci_low"] <= out["true_ate"]) & (out["ci_high"] >= out["true_ate"]),
@@ -253,8 +255,21 @@ def add_causal_errors(estimates: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def _reference_correlation(g: pd.DataFrame) -> float:
+    if "reference_estimate" not in g.columns or len(g) < 2:
+        return np.nan
+    pair = g[["estimate", "reference_estimate"]].dropna()
+    if len(pair) < 2:
+        return np.nan
+    estimate = pair["estimate"].to_numpy(dtype=float)
+    reference = pair["reference_estimate"].to_numpy(dtype=float)
+    if np.std(estimate) <= 1e-12 or np.std(reference) <= 1e-12:
+        return 1.0 if np.allclose(estimate, reference) else np.nan
+    return float(np.corrcoef(estimate, reference)[0, 1])
+
+
 def summarize_causal_utility(estimates: pd.DataFrame) -> pd.DataFrame:
-    """Aggregate Monte Carlo bias, RMSE, uncertainty calibration, and coverage."""
+    """Aggregate truth-relative error, reference distortion, and uncertainty."""
     rows = []
     for keys, g in estimates.groupby(
         ["scenario", "generator", "estimator"],
@@ -264,6 +279,10 @@ def summarize_causal_utility(estimates: pd.DataFrame) -> pd.DataFrame:
         empirical_sd = float(g["estimate"].std(ddof=1)) if len(g) > 1 else np.nan
         mean_se = float(g["se"].dropna().mean()) if g["se"].notna().any() else np.nan
         covered = g["covered"].dropna()
+        if "reference_estimate_distortion" in g.columns:
+            distortion = g["reference_estimate_distortion"].dropna().astype(float)
+        else:
+            distortion = pd.Series(dtype=float)
         rows.append(
             {
                 "scenario": scenario,
@@ -275,6 +294,16 @@ def summarize_causal_utility(estimates: pd.DataFrame) -> pd.DataFrame:
                 "bias": float(g["error"].mean()),
                 "mean_absolute_error": float(g["absolute_error"].mean()),
                 "rmse": float(np.sqrt(np.mean(g["error"] ** 2))),
+                "mean_reference_estimate_distortion": (
+                    float(distortion.mean()) if len(distortion) else np.nan
+                ),
+                "mean_absolute_reference_estimate_distortion": (
+                    float(distortion.abs().mean()) if len(distortion) else np.nan
+                ),
+                "rmse_reference_estimate_distortion": (
+                    float(np.sqrt(np.mean(distortion**2))) if len(distortion) else np.nan
+                ),
+                "reference_estimate_correlation": _reference_correlation(g),
                 "empirical_sd": empirical_sd,
                 "mean_estimated_se": mean_se,
                 "se_ratio": (

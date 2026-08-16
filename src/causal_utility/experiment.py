@@ -19,6 +19,7 @@ from .estimators import estimate_all
 from .plotting import (
     plot_bmi_distribution,
     plot_causal_bias,
+    plot_causal_rmse,
     plot_dag,
     plot_fidelity_vs_causal_error,
     plot_propensity_overlap,
@@ -29,9 +30,9 @@ from .utility_metrics import (
     fidelity_report,
     mechanism_preservation,
     predictive_utility,
-    truth_mechanism_diagnostics,
     summarize_causal_utility,
     summarize_fidelity,
+    truth_mechanism_diagnostics,
 )
 
 
@@ -74,17 +75,26 @@ def _estimate_rows(
                 "replicate": replicate,
                 "true_ate": true_ate,
                 "reference_estimate": (
-                    reference_estimates.get(est.estimator) if reference_estimates is not None else est.estimate
+                    reference_estimates.get(est.estimator)
+                    if reference_estimates is not None
+                    else est.estimate
                 ),
             }
         )
-        row["reference_estimate_distortion"] = row["estimate"] - row["reference_estimate"]
+        row["reference_estimate_distortion"] = (
+            row["estimate"] - row["reference_estimate"]
+        )
         rows.append(row)
     return rows
 
 
 def _long_metric_rows(
-    metrics: dict[str, float], *, scenario: str, generator: str, replicate: int, family: str
+    metrics: dict[str, float],
+    *,
+    scenario: str,
+    generator: str,
+    replicate: int,
+    family: str,
 ) -> list[dict[str, Any]]:
     return [
         {
@@ -113,7 +123,18 @@ def run_experiment(config: dict[str, Any]) -> dict[str, pd.DataFrame]:
         pool = pd.read_csv(cache)
         audit = pd.DataFrame(
             [
-                {"raw_variable": "__sample__", "analytic_variable": "complete_case_pool", "raw_missing_fraction": np.nan, "retained_nonmissing_fraction": np.nan, "retained_rows": len(pool), "source_path": str(raw_path), "cache_used": True}
+                {
+                    "raw_variable": "__sample__",
+                    "analytic_variable": "complete_case_pool",
+                    "raw_missing_fraction": np.nan,
+                    "invalid_or_out_of_range_fraction": np.nan,
+                    "usable_fraction_before_complete_case": np.nan,
+                    "retained_nonmissing_fraction": np.nan,
+                    "complete_case_pool_fraction": np.nan,
+                    "retained_rows": len(pool),
+                    "source_path": str(raw_path),
+                    "cache_used": True,
+                }
             ]
         )
     else:
@@ -144,47 +165,180 @@ def run_experiment(config: dict[str, Any]) -> dict[str, pd.DataFrame]:
     first_example: dict[str, pd.DataFrame | np.ndarray] = {}
 
     for scenario_idx, scenario_name in enumerate(scenarios):
-        scenario = _scenario_from_config(scenario_name, scenario_overrides.get(scenario_name))
+        scenario = _scenario_from_config(
+            scenario_name,
+            scenario_overrides.get(scenario_name),
+        )
         for replicate in range(repetitions):
             replicate_seed = base_seed + scenario_idx * 100_000 + replicate * 1_000
             x = sample_covariates(pool, n=n, seed=replicate_seed)
-            reference_truth = simulate_reference(x, scenario=scenario, seed=replicate_seed + 1)
+            reference_truth = simulate_reference(
+                x,
+                scenario=scenario,
+                seed=replicate_seed + 1,
+            )
             reference = observed_analysis_frame(reference_truth)
             true_ate = float(reference_truth.attrs["true_ate"])
 
-            truth_overlap = overlap_summary(reference_truth["true_propensity"].to_numpy(), reference_truth["treatment"].to_numpy())
-            estimated_ref_overlap = estimated_overlap(reference, seed=replicate_seed + 2)
-            overlap_rows.extend(_long_metric_rows({**{f"true_{k}": v for k, v in truth_overlap.items()}, **estimated_ref_overlap}, scenario=scenario_name, generator="reference", replicate=replicate, family="overlap"))
-            fidelity_rows.extend(_long_metric_rows(truth_mechanism_diagnostics(reference_truth, reference, seed=replicate_seed + 20), scenario=scenario_name, generator="reference", replicate=replicate, family="oracle_mechanism"))
+            truth_overlap = overlap_summary(
+                reference_truth["true_propensity"].to_numpy(),
+                reference_truth["treatment"].to_numpy(),
+            )
+            estimated_ref_overlap = estimated_overlap(
+                reference,
+                seed=replicate_seed + 2,
+            )
+            overlap_rows.extend(
+                _long_metric_rows(
+                    {
+                        **{f"true_{k}": v for k, v in truth_overlap.items()},
+                        **estimated_ref_overlap,
+                    },
+                    scenario=scenario_name,
+                    generator="reference",
+                    replicate=replicate,
+                    family="overlap",
+                )
+            )
+            fidelity_rows.extend(
+                _long_metric_rows(
+                    truth_mechanism_diagnostics(
+                        reference_truth,
+                        reference,
+                        seed=replicate_seed + 20,
+                    ),
+                    scenario=scenario_name,
+                    generator="reference",
+                    replicate=replicate,
+                    family="oracle_mechanism",
+                )
+            )
 
             t0 = time.perf_counter()
-            ref_rows = _estimate_rows(reference, scenario=scenario_name, generator="reference", replicate=replicate, true_ate=true_ate, seed=replicate_seed + 3, n_splits=n_splits)
-            timing_rows.append({"scenario": scenario_name, "generator": "reference", "replicate": replicate, "seconds": time.perf_counter() - t0})
+            ref_rows = _estimate_rows(
+                reference,
+                scenario=scenario_name,
+                generator="reference",
+                replicate=replicate,
+                true_ate=true_ate,
+                seed=replicate_seed + 3,
+                n_splits=n_splits,
+            )
+            timing_rows.append(
+                {
+                    "scenario": scenario_name,
+                    "generator": "reference",
+                    "replicate": replicate,
+                    "seconds": time.perf_counter() - t0,
+                }
+            )
             estimate_rows.extend(ref_rows)
-            reference_estimates = {r["estimator"]: float(r["estimate"]) for r in ref_rows}
+            reference_estimates = {
+                r["estimator"]: float(r["estimate"]) for r in ref_rows
+            }
 
             if not first_example:
                 first_example["reference"] = reference.copy()
-                first_example["truth_propensity"] = reference_truth["true_propensity"].to_numpy()
-                first_example["truth_treatment"] = reference_truth["treatment"].to_numpy()
+                first_example["truth_propensity"] = reference_truth[
+                    "true_propensity"
+                ].to_numpy()
+                first_example["truth_treatment"] = reference_truth[
+                    "treatment"
+                ].to_numpy()
 
             for generator_idx, generator in enumerate(generators):
                 gen_seed = replicate_seed + 100 + generator_idx * 100
                 t0 = time.perf_counter()
-                synthetic = synthesize(reference, method=generator, seed=gen_seed, ctgan_epochs=ctgan_epochs)
+                synthetic = synthesize(
+                    reference,
+                    method=generator,
+                    seed=gen_seed,
+                    ctgan_epochs=ctgan_epochs,
+                )
                 synth_seconds = time.perf_counter() - t0
                 if len(synthetic) != len(reference):
-                    raise RuntimeError(f"{generator} returned {len(synthetic)} rows for {len(reference)} reference rows")
+                    raise RuntimeError(
+                        f"{generator} returned {len(synthetic)} rows for "
+                        f"{len(reference)} reference rows"
+                    )
                 t1 = time.perf_counter()
-                synth_rows = _estimate_rows(synthetic, scenario=scenario_name, generator=generator, replicate=replicate, true_ate=true_ate, seed=gen_seed + 1, n_splits=n_splits, reference_estimates=reference_estimates)
+                synth_rows = _estimate_rows(
+                    synthetic,
+                    scenario=scenario_name,
+                    generator=generator,
+                    replicate=replicate,
+                    true_ate=true_ate,
+                    seed=gen_seed + 1,
+                    n_splits=n_splits,
+                    reference_estimates=reference_estimates,
+                )
                 estimate_rows.extend(synth_rows)
-                fidelity_rows.extend(_long_metric_rows(fidelity_report(reference, synthetic, seed=gen_seed + 2), scenario=scenario_name, generator=generator, replicate=replicate, family="fidelity"))
-                fidelity_rows.extend(_long_metric_rows(predictive_utility(reference, synthetic, seed=gen_seed + 3), scenario=scenario_name, generator=generator, replicate=replicate, family="predictive_utility"))
-                fidelity_rows.extend(_long_metric_rows(mechanism_preservation(reference, synthetic, seed=gen_seed + 4), scenario=scenario_name, generator=generator, replicate=replicate, family="mechanism_preservation"))
-                fidelity_rows.extend(_long_metric_rows(truth_mechanism_diagnostics(reference_truth, synthetic, seed=gen_seed + 40), scenario=scenario_name, generator=generator, replicate=replicate, family="oracle_mechanism"))
+                fidelity_rows.extend(
+                    _long_metric_rows(
+                        fidelity_report(reference, synthetic, seed=gen_seed + 2),
+                        scenario=scenario_name,
+                        generator=generator,
+                        replicate=replicate,
+                        family="fidelity",
+                    )
+                )
+                fidelity_rows.extend(
+                    _long_metric_rows(
+                        predictive_utility(
+                            reference,
+                            synthetic,
+                            seed=gen_seed + 3,
+                        ),
+                        scenario=scenario_name,
+                        generator=generator,
+                        replicate=replicate,
+                        family="predictive_utility",
+                    )
+                )
+                fidelity_rows.extend(
+                    _long_metric_rows(
+                        mechanism_preservation(
+                            reference,
+                            synthetic,
+                            seed=gen_seed + 4,
+                        ),
+                        scenario=scenario_name,
+                        generator=generator,
+                        replicate=replicate,
+                        family="mechanism_preservation",
+                    )
+                )
+                fidelity_rows.extend(
+                    _long_metric_rows(
+                        truth_mechanism_diagnostics(
+                            reference_truth,
+                            synthetic,
+                            seed=gen_seed + 40,
+                        ),
+                        scenario=scenario_name,
+                        generator=generator,
+                        replicate=replicate,
+                        family="oracle_mechanism",
+                    )
+                )
                 synth_overlap = estimated_overlap(synthetic, seed=gen_seed + 5)
-                overlap_rows.extend(_long_metric_rows(synth_overlap, scenario=scenario_name, generator=generator, replicate=replicate, family="overlap"))
-                timing_rows.append({"scenario": scenario_name, "generator": generator, "replicate": replicate, "seconds": synth_seconds + (time.perf_counter() - t1)})
+                overlap_rows.extend(
+                    _long_metric_rows(
+                        synth_overlap,
+                        scenario=scenario_name,
+                        generator=generator,
+                        replicate=replicate,
+                        family="overlap",
+                    )
+                )
+                timing_rows.append(
+                    {
+                        "scenario": scenario_name,
+                        "generator": generator,
+                        "replicate": replicate,
+                        "seconds": synth_seconds + (time.perf_counter() - t1),
+                    }
+                )
                 if replicate == 0 and scenario_idx == 0:
                     first_example[f"synthetic_{generator}"] = synthetic.copy()
 
@@ -194,7 +348,16 @@ def run_experiment(config: dict[str, Any]) -> dict[str, pd.DataFrame]:
     timings = pd.DataFrame(timing_rows)
     causal_summary = summarize_causal_utility(estimates)
     fidelity_summary = summarize_fidelity(fidelity)
-    return {"data_audit": audit, "estimates": estimates, "causal_summary": causal_summary, "fidelity": fidelity, "fidelity_summary": fidelity_summary, "overlap": overlap, "timings": timings, "_examples": first_example}
+    return {
+        "data_audit": audit,
+        "estimates": estimates,
+        "causal_summary": causal_summary,
+        "fidelity": fidelity,
+        "fidelity_summary": fidelity_summary,
+        "overlap": overlap,
+        "timings": timings,
+        "_examples": first_example,
+    }
 
 
 def save_results(results: dict[str, pd.DataFrame], output_dir: str | Path) -> None:
@@ -217,16 +380,36 @@ def make_figures(results: dict[str, pd.DataFrame], figure_dir: str | Path) -> No
     figure_dir = Path(figure_dir)
     figure_dir.mkdir(parents=True, exist_ok=True)
     plot_dag(figure_dir / "dag.png")
-    plot_causal_bias(results["causal_summary"], figure_dir / "causal_utility_mae.png")
-    plot_fidelity_vs_causal_error(results["fidelity"], results["estimates"], figure_dir / "fidelity_vs_causal_error.png")
+    plot_causal_bias(
+        results["causal_summary"],
+        figure_dir / "causal_utility_mae.png",
+    )
+    plot_causal_rmse(
+        results["causal_summary"],
+        figure_dir / "causal_utility_rmse.png",
+    )
+    plot_fidelity_vs_causal_error(
+        results["fidelity"],
+        results["estimates"],
+        figure_dir / "fidelity_vs_reference_distortion.png",
+    )
     examples = results.get("_examples", {})
     reference = examples.get("reference")
     if isinstance(reference, pd.DataFrame):
         p = examples.get("truth_propensity")
         d = examples.get("truth_treatment")
         if isinstance(p, np.ndarray) and isinstance(d, np.ndarray):
-            plot_propensity_overlap(p, d, figure_dir / "reference_propensity_overlap.png")
+            plot_propensity_overlap(
+                p,
+                d,
+                figure_dir / "reference_propensity_overlap.png",
+            )
         for key, synthetic in examples.items():
             if key.startswith("synthetic_") and isinstance(synthetic, pd.DataFrame):
                 generator = key.removeprefix("synthetic_")
-                plot_bmi_distribution(reference, synthetic, generator, figure_dir / f"bmi_{generator}.png")
+                plot_bmi_distribution(
+                    reference,
+                    synthetic,
+                    generator,
+                    figure_dir / f"bmi_{generator}.png",
+                )

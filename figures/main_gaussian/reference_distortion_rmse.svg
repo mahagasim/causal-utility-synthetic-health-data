@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="850" height="520" viewBox="0 0 850 520">
+<style>text{font-family:Arial,sans-serif;fill:#222}.t{font-size:21px;font-weight:600}.l{font-size:13px}.a{font-size:14px}</style>
+<text x="425.0" y="30" text-anchor="middle" class="t">Synthesis-specific causal distortion</text>
+<text x="272" y="86.4" text-anchor="end" class="l">Standard | AIPW</text>
+<rect x="280" y="62.7" width="66.0" height="35.9" fill="#4C78A8"/>
+<text x="351.0" y="86.4" class="l">0.230</text>
+<text x="272" y="137.6" text-anchor="end" class="l">Standard | CRUDE</text>
+<rect x="280" y="113.9" width="390.0" height="35.9" fill="#4C78A8"/>
+<text x="675.0" y="137.6" class="l">1.358</text>
+<text x="272" y="188.9" text-anchor="end" class="l">Standard | GCOMP</text>
+<rect x="280" y="165.2" width="59.3" height="35.9" fill="#4C78A8"/>
+<text x="344.3" y="188.9" class="l">0.207</text>
+<text x="272" y="240.1" text-anchor="end" class="l">Standard | IPW</text>
+<rect x="280" y="216.4" width="82.2" height="35.9" fill="#4C78A8"/>
+<text x="367.2" y="240.1" class="l">0.286</text>
+<text x="272" y="291.4" text-anchor="end" class="l">Weak Overlap | AIPW</text>
+<rect x="280" y="267.7" width="89.7" height="35.9" fill="#4C78A8"/>
+<text x="374.7" y="291.4" class="l">0.312</text>
+<text x="272" y="342.6" text-anchor="end" class="l">Weak Overlap | CRUDE</text>
+<rect x="280" y="318.9" width="504.8" height="35.9" fill="#4C78A8"/>
+<text x="789.8" y="342.6" class="l">1.758</text>
+<text x="272" y="393.9" text-anchor="end" class="l">Weak Overlap | GCOMP</text>
+<rect x="280" y="370.2" width="129.0" height="35.9" fill="#4C78A8"/>
+<text x="414.0" y="393.9" class="l">0.449</text>
+<text x="272" y="445.1" text-anchor="end" class="l">Weak Overlap | IPW</text>
+<rect x="280" y="421.4" width="120.5" height="35.9" fill="#4C78A8"/>
+<text x="405.5" y="445.1" class="l">0.420</text>
+<text x="545.0" y="505" text-anchor="middle" class="a">RMSE of synthetic-reference ATE distortion</text></svg>

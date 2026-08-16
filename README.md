@@ -23,12 +23,14 @@ The contribution is the evaluation framework rather than a claim that one synthe
 | Treatment | Simulated binary exposure with nonlinear confounding |
 | Outcome | Simulated continuous health-risk score in arbitrary units |
 | Ground truth | Both potential outcomes retained outside the analysis frame |
-| Estimand | ATE = E[Y(1)-Y(0)] = 2 in the primary DGP |
+| Estimand | ATE = E[Y(1)-Y(0)] = 2 |
 | DGP scenarios | Standard overlap; weak-overlap stress test |
-| Synthetic generators | Empirical Gaussian copula; optional CTGAN |
+| Primary synthesizer | Empirical Gaussian copula |
+| Optional extension | CTGAN integration is available but not part of the reported primary experiment |
 | Estimators | Crude difference, g-computation, IPW, cross-fitted AIPW |
 | Conventional utility | KS, total variation, correlations, classifier AUC/pMSE, TSTR |
-| Causal utility | ATE error, bias, RMSE, reference distortion, coverage, SE calibration |
+| Causal utility | ATE error, bias, RMSE, synthetic-reference distortion, coverage, SE calibration |
+| Main Monte Carlo | n = 4,000; 100 replications per scenario; seed = 20260811 |
 | Software | Python package, YAML experiments, pytest, Ruff, GitHub Actions |
 
 ### Causal graph
@@ -44,7 +46,7 @@ Only baseline `X` comes from BRFSS. Treatment `D` and outcome `Y` are generated 
 
 ## Data
 
-The working source is a pre-existing reduced 2022 BRFSS coursework extract containing 445,132 records. Restricting the data to the eight prespecified baseline variables and applying invalid-code/plausibility rules leaves a 324,636-row complete-case covariate pool (72.9%).
+The working source is a pre-existing reduced 2022 BRFSS coursework extract containing 445,132 records. Restricting the data to the eight prespecified baseline variables and applying invalid-code and study-specific BMI plausibility rules leaves a 324,636-row complete-case covariate pool (72.9%).
 
 Core covariates:
 
@@ -66,64 +68,96 @@ and
 Y_i(0)=m(X_i)+\epsilon_i, \qquad Y_i(1)=Y_i(0)+2.
 \]
 
-The treatment and outcome models contain different predictor roles plus nonlinear terms. This creates observed confounding while keeping the true causal effect known. The weak-overlap scenario increases the scale of the treatment score without changing the causal truth.
+The treatment and outcome models contain different predictor roles plus nonlinear terms. This creates observed confounding while keeping the causal truth known. The weak-overlap scenario increases the scale of the treatment score without changing the true ATE.
 
 ## Estimator hierarchy
 
 - **Crude difference in means:** deliberately confounded benchmark.
 - **G-computation:** cross-fitted histogram gradient boosting outcome regression.
-- **IPW:** Hájek-normalized weighting with a compact logistic propensity model.
-- **AIPW:** primary estimator; cross-fitted flexible treatment and outcome nuisance models with influence-function standard errors.
+- **IPW:** Hájek-normalized weighting with a compact main-effects logistic propensity model. The true treatment DGP contains nonlinearities and an interaction, so IPW is intentionally a misspecification-sensitive benchmark.
+- **AIPW:** primary estimator; cross-fitted flexible treatment and outcome nuisance models with influence-function-style standard errors.
 
-A reference-only large-sample sanity check (`n=8,000`) produced:
+The standard errors reported from a single synthetic dataset are analyst-facing model-based SEs; they do not automatically incorporate uncertainty from learning the synthesis model or generating a synthetic release. Monte Carlo coverage is therefore evaluated explicitly.
 
-| Scenario | Crude | G-comp | IPW | AIPW | True ATE |
-|---|---:|---:|---:|---:|---:|
-| Standard overlap | 6.229 | 2.058 | 2.366 | **2.046** | 2.000 |
-| Weak overlap | 8.307 | 2.634 | 2.696 | **2.079** | 2.000 |
+## Completed primary Gaussian-copula experiment
 
-This is a diagnostic check, not a substantive health result. It verifies that the causal benchmark behaves sensibly while the deliberately confounded crude estimator does not.
+The primary experiment is complete: **100 replications × 4,000 observations × two overlap scenarios**, with the same empirical Gaussian-copula baseline and four causal estimators applied to reference and synthetic data.
 
-## Synthetic-data evaluation
+### Primary AIPW results
 
-### Statistical fidelity
+| Scenario | Data | Mean ATE | Bias | RMSE vs truth | RMSE vs matching reference estimate | 95% coverage |
+|---|---|---:|---:|---:|---:|---:|
+| Standard overlap | Reference | 1.989 | -0.011 | 0.191 | 0.000 | 0.96 |
+| Standard overlap | Gaussian copula | 1.960 | -0.040 | 0.261 | 0.230 | 0.86 |
+| Weak overlap | Reference | 2.082 | 0.082 | 0.285 | 0.000 | 0.93 |
+| Weak overlap | Gaussian copula | 2.113 | 0.113 | 0.307 | 0.312 | 0.86 |
 
-- KS distance and standardized mean difference for continuous variables;
-- total variation distance for categorical variables;
-- correlation-matrix distortion;
-- real-vs-synthetic classifier AUC;
-- raw pMSE-style distinguishability;
-- a marginal `descriptive_fidelity_distance` used for visualization only.
+The Gaussian copula therefore retains the AIPW point estimand reasonably well on average, but it does **not** reproduce the full reference-analysis behavior. Synthetic-reference distortion increases under weak overlap, and nominal AIPW coverage falls from 0.96 to 0.86 in the standard scenario and from 0.93 to 0.86 in the weak-overlap scenario. With 100 replications, coverage estimates still have non-negligible Monte Carlo uncertainty and should be interpreted diagnostically rather than as publication-grade precision estimates.
 
-### Predictive and mechanism utility
+### Conventional fidelity is not sufficient
 
-- train-on-synthetic/test-on-reference treatment AUC;
-- train-on-synthetic/test-on-reference outcome RMSE;
-- treatment-mechanism distortion;
-- outcome treatment-contrast distortion;
-- oracle comparisons with the known propensity and individual-effect truth available in the semi-synthetic DGP.
+The Gaussian synthetic datasets look very similar to their matching reference datasets under conventional diagnostics:
 
-### Causal utility
+| Scenario | Descriptive fidelity distance | Real-vs-synthetic AUC | Correlation distortion |
+|---|---:|---:|---:|
+| Standard overlap | 0.0110 | 0.516 | 0.054 |
+| Weak overlap | 0.0114 | 0.517 | 0.060 |
 
-For every scenario × generator × estimator, the project reports ATE error, absolute error, Monte Carlo bias, MAE, RMSE, empirical SD, mean estimated SE, SE/SD ratio, 95% coverage, CI width, sign preservation, and distortion relative to the corresponding reference-data estimate.
+An AUC close to 0.5 means the logistic discriminator has little ability to separate reference from synthetic rows. Nevertheless, AIPW synthetic-reference distortion remains material: RMSE 0.230 under standard overlap and 0.312 under weak overlap.
 
-## Current computational validation
+Within the 100 replications, the correlation between the marginal descriptive-fidelity distance and **absolute AIPW synthetic-reference distortion** is -0.059 under standard overlap and -0.173 under weak overlap. In this experiment, marginal fidelity therefore provides little useful ranking information about which synthetic releases best preserve the causal estimate.
 
-The committed pilot uses only **3 replications × 1,500 observations × 2 scenarios** with the Gaussian copula. Its purpose is to verify the end-to-end pipeline on the BRFSS-derived covariate pool. It is intentionally too small for reliable Monte Carlo inference and is labeled accordingly.
+Mechanism-preservation diagnostics are also reported, but fitted treatment-contrast correlations are treated as secondary under the constant-effect DGP: because the true individual effect is exactly 2, fitted heterogeneity is model approximation/noise rather than true effect modification. See [`docs/limitations.md`](docs/limitations.md) and [`docs/protocol.md`](docs/protocol.md).
 
-The aggregate pilot tables are in [`results/pilot/`](results/pilot/). Figures are generated by the CLI and are not required for a clean source checkout.
+### Positivity matters
 
-## Full prespecified experiment
+The weak-overlap stress test behaves as intended. In the reference data, the mean share of observations with true treatment propensity below 0.1 or above 0.9 increases from **1.84%** under standard overlap to **26.03%** under weak overlap. Mean estimated IPW effective sample size falls from approximately **3,120** to **1,610** out of 4,000 observations.
 
-[`configs/full.yaml`](configs/full.yaml) defines the intended main experiment:
+Causal preservation generally becomes less stable in that setting. For example, AIPW synthetic-reference distortion RMSE rises from 0.230 to 0.312, while IPW distortion RMSE rises from 0.286 to 0.420.
 
-- 4,000 observations per reference sample;
-- 100 Monte Carlo replications;
-- standard and weak-overlap scenarios;
-- empirical Gaussian copula and CTGAN;
-- the same four causal estimators and utility scorecards throughout.
+### Why truth error and preservation must be separated
 
-CTGAN is an optional dependency. No CTGAN result is reported unless that experiment has actually run.
+A useful result from the semi-synthetic design is that a synthetic analysis can occasionally move an estimator **closer to the known truth while still failing to preserve the corresponding reference analysis**. For example, under weak overlap, g-computation RMSE relative to truth is 0.611 on reference data and 0.336 on Gaussian synthetic data, yet the synthetic-reference distortion RMSE is 0.449.
+
+The crude estimator shows the same phenomenon more starkly: synthesis attenuates part of the confounded association, making the crude estimate numerically closer to the true ATE while substantially changing the analysis result. This is why the project reports both truth-relative performance and distortion relative to the matching reference-data estimate.
+
+## Results and figures
+
+The completed primary outputs are in [`results/main_gaussian/`](results/main_gaussian/). The compact reviewer-facing table is `main_results_table.csv`; `aipw_release_level.csv` contains the 200 release-level AIPW/fidelity/overlap records used for the main preservation figure. Aggregate causal, fidelity, overlap, and timing summaries are also committed. No respondent-level BRFSS rows and no synthetic microdata are versioned. The full replicate-level output tables are reproducible from the committed configuration and code.
+
+Key figures are in [`figures/main_gaussian/`](figures/main_gaussian/):
+
+- `causal_utility_rmse.svg` — truth-relative RMSE for reference and synthetic analyses;
+- `reference_distortion_rmse.svg` — synthesis-specific causal distortion by estimator and scenario;
+- `fidelity_vs_reference_distortion.svg` — conventional fidelity versus absolute AIPW reference distortion;
+- `overlap_scenarios.svg` — standard versus weak-overlap propensity distributions.
+
+## Interpretation
+
+The main result is not that the Gaussian copula is categorically unsuitable. Rather:
+
+> **High conventional tabular fidelity can coexist with non-trivial distortion of a causal estimand and its uncertainty, and the problem becomes more pronounced when positivity is weak.**
+
+For responsible secondary analysis of synthetic health data, utility evaluation should therefore be tied to the downstream causal question rather than inferred from marginal and predictive fidelity alone.
+
+### Interview-ready takeaways
+
+- **Question:** does a synthetic health dataset that looks like the reference data also preserve a causal ATE analysis?
+- **Design:** real BRFSS X + simulated D/Y with known ATE = 2; standard and weak-overlap scenarios; Gaussian-copula synthesis; identical estimator hierarchy on reference and synthetic data.
+- **Finding:** conventional fidelity is very strong (discriminator AUC ≈ 0.52), while AIPW synthetic-reference distortion remains non-trivial and increases under weak overlap (RMSE 0.230 → 0.312).
+- **Boundary:** this is a causal-utility study, not a clinical effect estimate and not a formal privacy evaluation.
+
+A 30-second explanation, two-minute explanation, technical defense, likely interview questions, numbers to remember, and claims to avoid are in [`docs/interview_prep.md`](docs/interview_prep.md).
+
+## Pilot and validation
+
+The earlier committed pilot contains only **3 replications × 1,500 observations × two scenarios** and remains in [`results/pilot/`](results/pilot/) as a computational validation artifact, not as the evidence base for the conclusions above.
+
+The final execution path was additionally checked by rerunning that exact pilot configuration: its estimator summaries reproduce the committed pilot values exactly. The repository test suite also passes compile, Ruff, and pytest checks across the configured Python versions in GitHub Actions.
+
+## CTGAN scope
+
+CTGAN remains an optional integration and smoke-tested extension. **No CTGAN scientific result is reported here because the primary completed experiment uses the transparent Gaussian-copula baseline only.** This keeps the application-facing study focused and fully reproducible while avoiding claims from an unexecuted model comparison.
 
 ## Repository structure
 
@@ -137,6 +171,7 @@ CTGAN is an optional dependency. No CTGAN result is reported unless that experim
 ├── tests/
 ├── scripts/
 ├── results/
+├── figures/
 ├── literature/
 ├── docs/
 └── .github/workflows/
@@ -158,7 +193,7 @@ Place the reduced source workbook at:
 data/raw/Demo+Health data.xlsx
 ```
 
-Then run:
+Run tests and a smoke experiment:
 
 ```bash
 pytest
@@ -166,11 +201,16 @@ ruff check src tests
 causal-utility run --config configs/smoke.yaml --output results/smoke --figures figures/smoke
 ```
 
-For the full CTGAN experiment:
+Run the completed primary Gaussian protocol:
+
+```bash
+causal-utility run --config configs/main_gaussian.yaml --output results/main_gaussian --figures figures/main_gaussian
+```
+
+CTGAN can be installed separately for an optional extension:
 
 ```bash
 pip install -e ".[dev,ctgan]"
-causal-utility run --config configs/full.yaml --output results/full --figures figures/full
 ```
 
 See [`docs/reproducibility.md`](docs/reproducibility.md) for details.

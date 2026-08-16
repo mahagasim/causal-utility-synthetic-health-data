@@ -33,6 +33,12 @@ INVALID_CODES: dict[str, Iterable[float]] = {
     "genhlth": (7, 9),
 }
 
+# Study-specific plausibility screen for the empirical covariate pool. This is
+# not presented as an official BRFSS validity range; it should be reported as an
+# analysis choice and can be varied in a later sensitivity analysis.
+BMI_MIN_HUNDREDTHS = 1200
+BMI_MAX_HUNDREDTHS = 6000
+
 
 def load_brfss(path: str | Path) -> pd.DataFrame:
     """Load a BRFSS reduced extract from xlsx, csv, parquet, or Stata format."""
@@ -56,6 +62,22 @@ def validate_required_columns(df: pd.DataFrame) -> None:
         raise ValueError(f"Input is missing required BRFSS variables: {missing}")
 
 
+def _screen_raw_covariates(df: pd.DataFrame) -> pd.DataFrame:
+    """Apply special-code and plausibility screens before analytic recoding."""
+    validate_required_columns(df)
+    x = df.loc[:, REQUIRED_RAW_COLUMNS].copy()
+
+    for column, invalid in INVALID_CODES.items():
+        x[column] = x[column].replace(list(invalid), np.nan)
+
+    x.loc[
+        (x["_bmi5"] < BMI_MIN_HUNDREDTHS)
+        | (x["_bmi5"] > BMI_MAX_HUNDREDTHS),
+        "_bmi5",
+    ] = np.nan
+    return x
+
+
 def prepare_brfss(df: pd.DataFrame) -> pd.DataFrame:
     """Create the eight-variable empirical baseline covariate pool.
 
@@ -71,14 +93,10 @@ def prepare_brfss(df: pd.DataFrame) -> pd.DataFrame:
       (DIABETE4 == 1). Other valid categories remain 0; the variable is used
       only as a realistic baseline feature, not for a clinical claim.
     * ``active`` equals 1 when _TOTINDA == 1 (reported leisure-time activity).
+    * BMI values outside 12--60 kg/m^2 are screened as a study-specific
+      plausibility choice, not as an official BRFSS validity rule.
     """
-    validate_required_columns(df)
-    x = df.loc[:, REQUIRED_RAW_COLUMNS].copy()
-
-    for column, invalid in INVALID_CODES.items():
-        x[column] = x[column].replace(list(invalid), np.nan)
-
-    x.loc[(x["_bmi5"] < 1200) | (x["_bmi5"] > 6000), "_bmi5"] = np.nan
+    x = _screen_raw_covariates(df)
 
     out = pd.DataFrame(index=x.index)
     out["age_group"] = x["_ageg5yr"]
@@ -90,12 +108,24 @@ def prepare_brfss(df: pd.DataFrame) -> pd.DataFrame:
     out["diabetes"] = (x["diabete4"] == 1).astype(float)
     out["general_health"] = x["genhlth"]
 
-    for raw, analytic in (("_sex", "female"), ("_totinda", "active"), ("diabete4", "diabetes")):
+    for raw, analytic in (
+        ("_sex", "female"),
+        ("_totinda", "active"),
+        ("diabete4", "diabetes"),
+    ):
         out.loc[x[raw].isna(), analytic] = np.nan
 
     out = out.dropna().reset_index(drop=True)
 
-    for c in ["age_group", "female", "education", "income", "active", "diabetes", "general_health"]:
+    for c in [
+        "age_group",
+        "female",
+        "education",
+        "income",
+        "active",
+        "diabetes",
+        "general_health",
+    ]:
         out[c] = out[c].astype(int)
     out["bmi"] = out["bmi"].astype(float)
 
@@ -103,21 +133,42 @@ def prepare_brfss(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def data_audit(raw: pd.DataFrame, cleaned: pd.DataFrame) -> pd.DataFrame:
-    """Return an auditable summary of source missingness and retained rows."""
+    """Return source missingness, screening loss, and complete-case retention."""
+    screened = _screen_raw_covariates(raw)
+    pool_fraction = len(cleaned) / len(raw) if len(raw) else np.nan
     rows = []
     for raw_col, analytic_col in RAW_TO_ANALYTIC.items():
-        rows.append({
-            "raw_variable": raw_col,
-            "analytic_variable": analytic_col,
-            "raw_missing_fraction": float(raw[raw_col].isna().mean()),
-            "retained_nonmissing_fraction": float(cleaned[analytic_col].notna().mean()),
-        })
-    rows.append({
-        "raw_variable": "__sample__",
-        "analytic_variable": "complete_case_pool",
-        "raw_missing_fraction": float("nan"),
-        "retained_nonmissing_fraction": len(cleaned) / len(raw),
-    })
+        raw_missing = raw[raw_col].isna()
+        screened_missing = screened[raw_col].isna()
+        invalid_or_out_of_range = (~raw_missing) & screened_missing
+        usable_fraction = float(screened[raw_col].notna().mean())
+        rows.append(
+            {
+                "raw_variable": raw_col,
+                "analytic_variable": analytic_col,
+                "raw_missing_fraction": float(raw_missing.mean()),
+                "invalid_or_out_of_range_fraction": float(
+                    invalid_or_out_of_range.mean()
+                ),
+                "usable_fraction_before_complete_case": usable_fraction,
+                # Retained for backward-compatible output naming. For variable
+                # rows this now means usable after variable-specific screening,
+                # rather than the uninformative post-complete-case value 1.0.
+                "retained_nonmissing_fraction": usable_fraction,
+                "complete_case_pool_fraction": pool_fraction,
+            }
+        )
+    rows.append(
+        {
+            "raw_variable": "__sample__",
+            "analytic_variable": "complete_case_pool",
+            "raw_missing_fraction": np.nan,
+            "invalid_or_out_of_range_fraction": np.nan,
+            "usable_fraction_before_complete_case": np.nan,
+            "retained_nonmissing_fraction": pool_fraction,
+            "complete_case_pool_fraction": pool_fraction,
+        }
+    )
     return pd.DataFrame(rows)
 
 
