@@ -117,7 +117,7 @@ Across Monte Carlo replicates:
 
 The within-dataset SEs are analyst-facing model-based uncertainty estimates. For synthetic datasets they do **not** incorporate uncertainty from estimating the synthesis model or from the original confidential/reference sample. Their adequacy is assessed empirically through Monte Carlo SD, SE/SD ratios, and coverage rather than assumed.
 
-Mechanism diagnostics also evaluate whether models learned from synthetic data reproduce the known treatment propensity and treatment-effect contrast on the original X grid.
+Mechanism diagnostics also evaluate whether models learned from synthetic data reproduce the known treatment propensity and fitted treatment-effect contrast on the original X grid. Because the primary DGP has a constant individual treatment effect, correlations between fitted treatment-contrast vectors are secondary diagnostics: any fitted heterogeneity reflects estimation noise or model approximation rather than true effect modification. For the primary question, ATE preservation and contrast RMSE are more interpretable than contrast correlation.
 
 ## Monte Carlo sizes
 
