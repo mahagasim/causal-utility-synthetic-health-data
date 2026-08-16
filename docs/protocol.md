@@ -237,43 +237,43 @@ The larger scale pushes more propensity scores toward 0 and 1 while holding the 
 
 The primary generator is an empirical Gaussian copula fitted to
 
-$$
+```math
 W_i=(X_i,D_i,Y_i).
-$$
+```
 
 For each continuous variable $W_j$, let $R_{ij}$ denote its average rank. The empirical probability and latent-normal score are
 
-$$
-U_{ij}=\frac{R_{ij}-1/2}{n},
+```math
+U_{ij}=\frac{R_{ij}-0.5}{n},
 \qquad
 Z_{ij}=\Phi^{-1}(U_{ij}).
-$$
+```
 
-For a categorical variable with categories $c=1,\ldots,K$, empirical probabilities $p_c$, and cumulative lower bound
+For a categorical variable with categories $c=1,\ldots,K$ and empirical probabilities $p_c$, define the cumulative lower bound by
 
-$$
-L_c=\sum_{h<c}p_h,
-$$
+```math
+L_c=\sum_{h=1}^{c-1}p_h.
+```
 
-the observed category is represented by the midpoint of its probability interval on the latent-normal scale:
+The observed category is represented by the midpoint of its probability interval on the latent-normal scale:
 
-$$
-Z(c)=\Phi^{-1}\!\left(L_c+\frac{p_c}{2}\right).
-$$
+```math
+Z(c)=\Phi^{-1}\left(L_c+\frac{p_c}{2}\right).
+```
 
-Let $Z_i$ denote the resulting latent vector. Its empirical correlation matrix is projected to a valid correlation matrix $\widehat R$. Synthetic latent rows are sampled from
+Let $Z_i$ denote the resulting latent vector. Its empirical correlation matrix is projected to a valid correlation matrix $\widehat{R}$. Synthetic latent rows are sampled from
 
-$$
-Z_i^*\sim\mathcal N(0,\widehat R),
-$$
+```math
+Z_i^{\ast}\sim\mathcal{N}\left(0,\widehat{R}\right).
+```
 
-then mapped to the unit interval by
+They are then mapped to the unit interval by
 
-$$
-U_i^*=\Phi(Z_i^*).
-$$
+```math
+U_i^{\ast}=\Phi\left(Z_i^{\ast}\right).
+```
 
-Continuous variables are reconstructed using empirical quantile interpolation. Categorical variables are reconstructed by assigning $U_{ij}^*$ to the category whose empirical cumulative-probability interval contains it.
+Continuous variables are reconstructed using empirical quantile interpolation. Categorical variables are reconstructed by assigning $U_{ij}^{\ast}$ to the category whose empirical cumulative-probability interval contains it.
 
 This generator is used as a transparent dependence-preserving baseline, not as a claim of state-of-the-art synthesis.
 
