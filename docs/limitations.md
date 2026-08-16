@@ -9,8 +9,9 @@
 5. **Finite generator set.** The empirical Gaussian copula is the transparent primary baseline. CTGAN integration is available and smoke-tested, but CTGAN results are not claimed unless the full benchmark is actually run.
 6. **Estimator misspecification is partly deliberate.** The IPW benchmark uses a compact main-effects logistic propensity model even though the treatment DGP contains nonlinear terms and an interaction. Persistent IPW bias should therefore be interpreted as misspecification sensitivity, not automatically as synthesis failure. The cross-fitted AIPW estimator is the primary estimator.
 7. **Synthetic-data inference.** Naively treating one synthetic dataset as observed can misrepresent uncertainty. The within-dataset SEs reported here are analyst-facing model-based SEs and do not include synthesis-model or original-sample uncertainty. The study therefore emphasizes Monte Carlo empirical SD, SE/SD ratios, coverage, and synthetic-reference point-estimate distortion.
-8. **Finite Monte Carlo precision.** The primary application configuration uses 100 replications. For a nominal 95% coverage rate, the Monte Carlo standard error is about 2.2 percentage points, so small coverage differences should not be overinterpreted.
-9. **No formal privacy evaluation.** Privacy-risk attacks, formal anonymity guarantees, and differential privacy are outside the MVP.
+8. **Mechanism-correlation diagnostics are secondary under the constant-effect DGP.** The true individual treatment effect is constant at 2, so any heterogeneity in fitted treatment contrasts is estimation noise/model approximation rather than true effect modification. Correlations between fitted real- and synthetic-data treatment contrasts can therefore be unstable or hard to interpret; contrast RMSE and the prespecified ATE-preservation metrics are more informative for the primary question.
+9. **Finite Monte Carlo precision.** The primary application configuration uses 100 replications. For a nominal 95% coverage rate, the Monte Carlo standard error is about 2.2 percentage points, so small coverage differences should not be overinterpreted.
+10. **No formal privacy evaluation.** Privacy-risk attacks, formal anonymity guarantees, and differential privacy are outside the MVP.
 
 ## High-value extensions
 
