@@ -330,44 +330,45 @@ Truth variables $(e_i,Y_i(0),Y_i(1),\tau_i)$ are retained only for evaluation an
 
 The primary synthesizer is applied to the observed analysis vector
 
-$$
-W_i=(X_i,D_i,Y_i),
-$$
+```math
+W_i=(X_i,D_i,Y_i).
+```
 
-not to the truth variables above.
+It is **not** applied to the truth variables above.
 
-For a continuous variable $W_j$, the observed values are mapped to latent normal scores using empirical ranks:
+For a continuous variable $W_j$, observed values are mapped to latent normal scores using empirical ranks:
 
-$$
-U_{ij}=\frac{R_{ij}-1/2}{n},
+```math
+U_{ij}=\frac{R_{ij}-0.5}{n},
 \qquad
-Z_{ij}=\Phi^{-1}(U_{ij}),
-$$
+Z_{ij}=\Phi^{-1}(U_{ij}).
+```
 
-where $R_{ij}$ is the average rank and $\Phi$ is the standard-normal CDF.
+Here $R_{ij}$ is the average rank and $\Phi$ is the standard-normal cumulative distribution function.
 
-For a categorical variable with categories $c=1,\ldots,K$ and empirical probabilities $p_c$, category $c$ is represented on the latent scale by the midpoint of its cumulative-probability interval:
+For a categorical variable with categories $c=1,\ldots,K$ and empirical probabilities $p_c$, define the lower cumulative probability of category $c$ as
 
-$$
-Z(c)=
-\Phi^{-1}\!\left(
-L_c+\frac{p_c}{2}
-\right),
-\qquad
-L_c=\sum_{h<c}p_h.
-$$
+```math
+L_c=\sum_{h=1}^{c-1}p_h.
+```
 
-Let $Z_i$ denote the complete latent vector. The empirical latent correlation matrix is estimated and projected to a valid correlation matrix, $\widehat R$. Synthetic latent observations are then drawn from
+Category $c$ is represented on the latent scale by the midpoint of its cumulative-probability interval:
 
-$$
-Z_i^{*}\sim\mathcal N(0,\widehat R),
-$$
+```math
+Z(c)=\Phi^{-1}\left(L_c+\frac{p_c}{2}\right).
+```
 
-and transformed to uniforms
+Let $Z_i$ denote the complete latent vector. The empirical latent correlation matrix is estimated and projected to a valid correlation matrix, denoted $\widehat{R}$. Synthetic latent observations are then drawn from
 
-$$
-U_i^{*}=\Phi(Z_i^{*}).
-$$
+```math
+Z_i^{\ast}\sim\mathcal{N}\left(0,\widehat{R}\right).
+```
+
+They are transformed to uniforms using
+
+```math
+U_i^{\ast}=\Phi\left(Z_i^{\ast}\right).
+```
 
 Continuous variables are mapped back through empirical quantiles; categorical variables are mapped back through their empirical cumulative probabilities. Thus the Gaussian copula is intended to preserve empirical marginals and approximate dependence while providing a transparent setting in which causal distortion can be measured.
 
