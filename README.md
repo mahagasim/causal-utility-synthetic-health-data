@@ -81,7 +81,7 @@ The standard errors reported from a single synthetic dataset are analyst-facing 
 
 ## Completed primary Gaussian-copula experiment
 
-The primary experiment is now complete: **100 replications × 4,000 observations × two overlap scenarios**, with the same empirical Gaussian-copula baseline and four causal estimators applied to reference and synthetic data.
+The primary experiment is complete: **100 replications × 4,000 observations × two overlap scenarios**, with the same empirical Gaussian-copula baseline and four causal estimators applied to reference and synthetic data.
 
 ### Primary AIPW results
 
@@ -106,6 +106,8 @@ The Gaussian synthetic datasets look very similar to their matching reference da
 An AUC close to 0.5 means the logistic discriminator has little ability to separate reference from synthetic rows. Nevertheless, AIPW synthetic-reference distortion remains material: RMSE 0.230 under standard overlap and 0.312 under weak overlap.
 
 Within the 100 replications, the correlation between the marginal descriptive-fidelity distance and **absolute AIPW synthetic-reference distortion** is -0.059 under standard overlap and -0.173 under weak overlap. In this experiment, marginal fidelity therefore provides little useful ranking information about which synthetic releases best preserve the causal estimate.
+
+Mechanism-preservation diagnostics are also reported, but fitted treatment-contrast correlations are treated as secondary under the constant-effect DGP: because the true individual effect is exactly 2, fitted heterogeneity is model approximation/noise rather than true effect modification. See [`docs/limitations.md`](docs/limitations.md) and [`docs/protocol.md`](docs/protocol.md).
 
 ### Positivity matters
 
@@ -137,6 +139,15 @@ The main result is not that the Gaussian copula is categorically unsuitable. Rat
 > **High conventional tabular fidelity can coexist with non-trivial distortion of a causal estimand and its uncertainty, and the problem becomes more pronounced when positivity is weak.**
 
 For responsible secondary analysis of synthetic health data, utility evaluation should therefore be tied to the downstream causal question rather than inferred from marginal and predictive fidelity alone.
+
+### Interview-ready takeaways
+
+- **Question:** does a synthetic health dataset that looks like the reference data also preserve a causal ATE analysis?
+- **Design:** real BRFSS X + simulated D/Y with known ATE = 2; standard and weak-overlap scenarios; Gaussian-copula synthesis; identical estimator hierarchy on reference and synthetic data.
+- **Finding:** conventional fidelity is very strong (discriminator AUC ≈ 0.52), while AIPW synthetic-reference distortion remains non-trivial and increases under weak overlap (RMSE 0.230 → 0.312).
+- **Boundary:** this is a causal-utility study, not a clinical effect estimate and not a formal privacy evaluation.
+
+A 30-second explanation, two-minute explanation, technical defense, likely interview questions, numbers to remember, and claims to avoid are in [`docs/interview_prep.md`](docs/interview_prep.md).
 
 ## Pilot and validation
 
