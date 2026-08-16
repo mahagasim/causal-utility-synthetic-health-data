@@ -1,19 +1,115 @@
 # Causal Utility of Synthetic Health Data
 
-**A semi-synthetic Monte Carlo study of whether conventional statistical fidelity predicts preservation of a causal treatment effect.**
+**A semi-synthetic Monte Carlo study of whether strong statistical fidelity in synthetic health data actually preserves a downstream causal analysis.**
+
+---
+
+## Results first
+
+### Headline result
+
+> **High conventional synthetic-data fidelity does not guarantee preservation of a causal treatment-effect analysis.**
+>
+> In this experiment, Gaussian-copula synthetic data are very difficult to distinguish from their matching reference data using standard fidelity diagnostics, yet the downstream causal estimate and its uncertainty are not perfectly preserved. The gap becomes larger when treatment overlap is weak.
+
+### What happened in the primary AIPW analysis?
+
+The true ATE is **2.0**. The main experiment uses **100 Monte Carlo replications per scenario**, **4,000 observations per replicate**, and the same cross-fitted AIPW estimator on reference and synthetic data.
+
+| Scenario | Data | Mean ATE | Bias | RMSE vs truth | RMSE vs matching reference | 95% coverage |
+|---|---|---:|---:|---:|---:|---:|
+| Standard overlap | Reference | **1.989** | -0.011 | **0.191** | 0.000 | **0.96** |
+| Standard overlap | Gaussian copula | **1.960** | -0.040 | **0.261** | **0.230** | **0.86** |
+| Weak overlap | Reference | **2.082** | 0.082 | **0.285** | 0.000 | **0.93** |
+| Weak overlap | Gaussian copula | **2.113** | 0.113 | **0.307** | **0.312** | **0.86** |
+
+### Interpretation
+
+There are three distinct messages in this table:
+
+1. **The point estimate is preserved reasonably well on average.** Mean AIPW estimates remain close to the true ATE of 2 in both scenarios.
+2. **The synthetic analysis does not reproduce the reference analysis exactly.** Synthetic-reference AIPW distortion has RMSE **0.230** under standard overlap and **0.312** under weak overlap.
+3. **Inferential behavior is less well preserved than the point estimate.** AIPW coverage is **0.86** on synthetic data in both scenarios, compared with **0.96** and **0.93** on the corresponding reference data. These coverage estimates are based on 100 replications, so small differences should not be overinterpreted, but the pattern is diagnostically important.
+
+### Result 1 — conventional fidelity looks excellent
+
+| Scenario | Descriptive fidelity distance ↓ | Real-vs-synthetic AUC | Correlation distortion ↓ |
+|---|---:|---:|---:|
+| Standard overlap | **0.0110** | **0.516** | **0.054** |
+| Weak overlap | **0.0114** | **0.517** | **0.060** |
+
+A real-vs-synthetic classifier AUC near **0.5** means that the classifier has little ability to distinguish reference from synthetic rows. On conventional tabular diagnostics, the Gaussian-copula releases therefore look very good.
+
+**But that is not enough.** The same releases still produce non-trivial distortion of the causal analysis. Across the 100 replications, the correlation between marginal descriptive-fidelity distance and absolute AIPW synthetic-reference distortion is only **-0.059** under standard overlap and **-0.173** under weak overlap. In this experiment, conventional marginal fidelity provides little useful ranking information about which synthetic releases best preserve the causal estimate.
+
+<p align="center">
+  <img src="figures/main_gaussian/fidelity_vs_reference_distortion.svg" width="78%" alt="Conventional fidelity versus AIPW synthetic-reference distortion">
+</p>
+
+**Reading the figure:** moving left means better descriptive fidelity; moving down means better causal preservation. If ordinary fidelity were a strong proxy for causal utility, releases should line up clearly along a downward relationship. They do not.
+
+### Result 2 — weak overlap makes causal preservation harder
+
+The weak-overlap scenario changes the treatment assignment mechanism while leaving the true ATE unchanged.
+
+| Overlap diagnostic | Standard overlap | Weak overlap |
+|---|---:|---:|
+| True propensity outside 0.1–0.9 | **1.84%** | **26.03%** |
+| Mean estimated IPW effective sample size | **≈ 3,120 / 4,000** | **≈ 1,610 / 4,000** |
+| AIPW synthetic-reference distortion RMSE | **0.230** | **0.312** |
+| IPW synthetic-reference distortion RMSE | **0.286** | **0.420** |
+
+**Interpretation:** when positivity deteriorates, causal adjustment becomes more sensitive to changes in the joint distribution. The synthetic data can still look highly realistic marginally while being less reliable for reproducing the downstream causal analysis.
+
+<p align="center">
+  <img src="figures/main_gaussian/overlap_scenarios.svg" width="78%" alt="Propensity overlap in standard and weak-overlap scenarios">
+</p>
+
+### Result 3 — being closer to the truth is not the same as preserving the original analysis
+
+The semi-synthetic design lets us evaluate two different questions:
+
+- **Truth-relative performance:** how close is an estimator to the known ATE of 2?
+- **Preservation:** how close is the synthetic-data estimate to the estimate obtained from its matching reference dataset?
+
+These can disagree.
+
+Under weak overlap, for example, g-computation has RMSE **0.611** relative to truth on the reference data and **0.336** on the Gaussian synthetic data. The synthetic estimate therefore looks *better* relative to truth, yet its synthetic-reference distortion RMSE is still **0.449**.
+
+That is not a contradiction. It means synthesis changed the analysis enough to move the estimator in a favorable numerical direction. For synthetic-data utility, that should not be mistaken for faithful preservation.
+
+<p align="center">
+  <img src="figures/main_gaussian/reference_distortion_rmse.svg" width="78%" alt="Synthetic-reference causal distortion by estimator and overlap scenario">
+</p>
+
+### What the project supports
+
+> **For responsible secondary analysis of synthetic health data, utility should be evaluated against the downstream causal estimand and inferential task—not inferred from marginal, correlation, or predictive fidelity alone.**
+
+### What the project does *not* claim
+
+- It does **not** show that all synthetic data are unsuitable for causal research.
+- It does **not** claim that the Gaussian copula is state of the art or universally representative of synthetic-data generators.
+- It does **not** estimate a real clinical effect from BRFSS; BRFSS supplies baseline covariates only.
+- It does **not** establish anonymity, disclosure protection, membership-inference resistance, or differential privacy.
+- It does **not** report scientific CTGAN results; CTGAN remains an optional integration only.
+
+For a short verbal explanation and technical interview defense, see [`docs/interview_prep.md`](docs/interview_prep.md).
+
+---
 
 ## Research question
 
-When do synthetic health datasets preserve the answer to a causal research question, and when can conventional statistical fidelity be misleading about their usefulness for causal inference?
+**When do synthetic health datasets preserve the answer to a causal research question, and when can conventional statistical fidelity be misleading about their usefulness for causal inference?**
 
-The project separates four ideas that are often conflated:
+The project deliberately separates four ideas that are often conflated:
 
 1. **Distributional fidelity** — does the synthetic table resemble the reference table?
 2. **Predictive utility** — do models trained on synthetic data transfer to reference data?
 3. **Mechanism preservation** — are treatment-assignment and outcome relationships retained?
 4. **Causal/inferential utility** — is a prespecified ATE, together with uncertainty and scientific conclusions, preserved?
 
-The contribution is the evaluation framework rather than a claim that one synthesizer is universally best.
+The contribution is the evaluation framework and empirical stress test, not a claim that one synthesizer is universally best.
 
 ## Study design
 
@@ -46,7 +142,7 @@ Only baseline `X` comes from BRFSS. Treatment `D` and outcome `Y` are generated 
 
 ## Data
 
-The working source is a pre-existing reduced 2022 BRFSS coursework extract containing 445,132 records. Restricting the data to the eight prespecified baseline variables and applying invalid-code and study-specific BMI plausibility rules leaves a 324,636-row complete-case covariate pool (72.9%).
+The working source is a pre-existing reduced 2022 BRFSS coursework extract containing **445,132 records**. Restricting the data to the eight prespecified baseline variables and applying invalid-code and study-specific BMI plausibility rules leaves a **324,636-row complete-case covariate pool (72.9%)**.
 
 Core covariates:
 
@@ -79,51 +175,25 @@ The treatment and outcome models contain different predictor roles plus nonlinea
 
 The standard errors reported from a single synthetic dataset are analyst-facing model-based SEs; they do not automatically incorporate uncertainty from learning the synthesis model or generating a synthetic release. Monte Carlo coverage is therefore evaluated explicitly.
 
-## Completed primary Gaussian-copula experiment
-
-The primary experiment is complete: **100 replications × 4,000 observations × two overlap scenarios**, with the same empirical Gaussian-copula baseline and four causal estimators applied to reference and synthetic data.
-
-### Primary AIPW results
-
-| Scenario | Data | Mean ATE | Bias | RMSE vs truth | RMSE vs matching reference estimate | 95% coverage |
-|---|---|---:|---:|---:|---:|---:|
-| Standard overlap | Reference | 1.989 | -0.011 | 0.191 | 0.000 | 0.96 |
-| Standard overlap | Gaussian copula | 1.960 | -0.040 | 0.261 | 0.230 | 0.86 |
-| Weak overlap | Reference | 2.082 | 0.082 | 0.285 | 0.000 | 0.93 |
-| Weak overlap | Gaussian copula | 2.113 | 0.113 | 0.307 | 0.312 | 0.86 |
-
-The Gaussian copula therefore retains the AIPW point estimand reasonably well on average, but it does **not** reproduce the full reference-analysis behavior. Synthetic-reference distortion increases under weak overlap, and nominal AIPW coverage falls from 0.96 to 0.86 in the standard scenario and from 0.93 to 0.86 in the weak-overlap scenario. With 100 replications, coverage estimates still have non-negligible Monte Carlo uncertainty and should be interpreted diagnostically rather than as publication-grade precision estimates.
-
-### Conventional fidelity is not sufficient
-
-The Gaussian synthetic datasets look very similar to their matching reference datasets under conventional diagnostics:
-
-| Scenario | Descriptive fidelity distance | Real-vs-synthetic AUC | Correlation distortion |
-|---|---:|---:|---:|
-| Standard overlap | 0.0110 | 0.516 | 0.054 |
-| Weak overlap | 0.0114 | 0.517 | 0.060 |
-
-An AUC close to 0.5 means the logistic discriminator has little ability to separate reference from synthetic rows. Nevertheless, AIPW synthetic-reference distortion remains material: RMSE 0.230 under standard overlap and 0.312 under weak overlap.
-
-Within the 100 replications, the correlation between the marginal descriptive-fidelity distance and **absolute AIPW synthetic-reference distortion** is -0.059 under standard overlap and -0.173 under weak overlap. In this experiment, marginal fidelity therefore provides little useful ranking information about which synthetic releases best preserve the causal estimate.
-
 Mechanism-preservation diagnostics are also reported, but fitted treatment-contrast correlations are treated as secondary under the constant-effect DGP: because the true individual effect is exactly 2, fitted heterogeneity is model approximation/noise rather than true effect modification. See [`docs/limitations.md`](docs/limitations.md) and [`docs/protocol.md`](docs/protocol.md).
 
-### Positivity matters
+## Full results
 
-The weak-overlap stress test behaves as intended. In the reference data, the mean share of observations with true treatment propensity below 0.1 or above 0.9 increases from **1.84%** under standard overlap to **26.03%** under weak overlap. Mean estimated IPW effective sample size falls from approximately **3,120** to **1,610** out of 4,000 observations.
+The completed primary outputs are in [`results/main_gaussian/`](results/main_gaussian/).
 
-Causal preservation generally becomes less stable in that setting. For example, AIPW synthetic-reference distortion RMSE rises from 0.230 to 0.312, while IPW distortion RMSE rises from 0.286 to 0.420.
+Key files:
 
-### Why truth error and preservation must be separated
+- [`main_results_table.csv`](results/main_gaussian/main_results_table.csv) — compact reviewer-facing causal results;
+- [`causal_summary.csv`](results/main_gaussian/causal_summary.csv) — full Monte Carlo causal summary;
+- [`fidelity_summary.csv`](results/main_gaussian/fidelity_summary.csv) — fidelity, predictive, mechanism, and oracle diagnostics;
+- [`aipw_release_level.csv`](results/main_gaussian/aipw_release_level.csv) — release-level AIPW/fidelity/overlap records used for the main preservation plot;
+- [`overlap_summary.csv`](results/main_gaussian/overlap_summary.csv) — overlap diagnostics;
+- [`data_audit.csv`](results/main_gaussian/data_audit.csv) — preprocessing and retention audit;
+- [`run_config.json`](results/main_gaussian/run_config.json) — executed experiment configuration.
 
-A useful result from the semi-synthetic design is that a synthetic analysis can occasionally move an estimator **closer to the known truth while still failing to preserve the corresponding reference analysis**. For example, under weak overlap, g-computation RMSE relative to truth is 0.611 on reference data and 0.336 on Gaussian synthetic data, yet the synthetic-reference distortion RMSE is 0.449.
+No respondent-level BRFSS rows and no row-level synthetic datasets are versioned. Full replicate-level outputs are reproducible from the committed configuration and code.
 
-The crude estimator shows the same phenomenon more starkly: synthesis attenuates part of the confounded association, making the crude estimate numerically closer to the true ATE while substantially changing the analysis result. This is why the project reports both truth-relative performance and distortion relative to the matching reference-data estimate.
-
-## Results and figures
-
-The completed primary outputs are in [`results/main_gaussian/`](results/main_gaussian/). The compact reviewer-facing table is `main_results_table.csv`; `aipw_release_level.csv` contains the 200 release-level AIPW/fidelity/overlap records used for the main preservation figure. Aggregate causal, fidelity, overlap, and timing summaries are also committed. No respondent-level BRFSS rows and no synthetic microdata are versioned. The full replicate-level output tables are reproducible from the committed configuration and code.
+### Figures
 
 Key figures are in [`figures/main_gaussian/`](figures/main_gaussian/):
 
@@ -132,28 +202,11 @@ Key figures are in [`figures/main_gaussian/`](figures/main_gaussian/):
 - `fidelity_vs_reference_distortion.svg` — conventional fidelity versus absolute AIPW reference distortion;
 - `overlap_scenarios.svg` — standard versus weak-overlap propensity distributions.
 
-## Interpretation
-
-The main result is not that the Gaussian copula is categorically unsuitable. Rather:
-
-> **High conventional tabular fidelity can coexist with non-trivial distortion of a causal estimand and its uncertainty, and the problem becomes more pronounced when positivity is weak.**
-
-For responsible secondary analysis of synthetic health data, utility evaluation should therefore be tied to the downstream causal question rather than inferred from marginal and predictive fidelity alone.
-
-### Interview-ready takeaways
-
-- **Question:** does a synthetic health dataset that looks like the reference data also preserve a causal ATE analysis?
-- **Design:** real BRFSS X + simulated D/Y with known ATE = 2; standard and weak-overlap scenarios; Gaussian-copula synthesis; identical estimator hierarchy on reference and synthetic data.
-- **Finding:** conventional fidelity is very strong (discriminator AUC ≈ 0.52), while AIPW synthetic-reference distortion remains non-trivial and increases under weak overlap (RMSE 0.230 → 0.312).
-- **Boundary:** this is a causal-utility study, not a clinical effect estimate and not a formal privacy evaluation.
-
-A 30-second explanation, two-minute explanation, technical defense, likely interview questions, numbers to remember, and claims to avoid are in [`docs/interview_prep.md`](docs/interview_prep.md).
-
 ## Pilot and validation
 
 The earlier committed pilot contains only **3 replications × 1,500 observations × two scenarios** and remains in [`results/pilot/`](results/pilot/) as a computational validation artifact, not as the evidence base for the conclusions above.
 
-The final execution path was additionally checked by rerunning that exact pilot configuration: its estimator summaries reproduce the committed pilot values exactly. The repository test suite also passes compile, Ruff, and pytest checks across the configured Python versions in GitHub Actions.
+The final execution path was additionally checked by rerunning that exact pilot configuration: its estimator summaries reproduce the committed pilot values exactly. The repository test suite passes compilation, Ruff, and pytest across the configured Python versions in GitHub Actions.
 
 ## CTGAN scope
 
